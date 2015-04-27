@@ -218,7 +218,7 @@ int xng_markdown_consume(char *text, XNGMarkdownParserCode token, yyscan_t scann
 }
 
 - (NSDictionary *)attributesForFontWithName:(NSString *)fontName {
-    return @{NSFontAttributeName: [UINSFont fontWithName:fontName size:self.topFont.pointSize]};
+    return @{NSFontAttributeName: [self fontWithName:fontName]};
 }
 
 - (NSDictionary *)attributesForFont:(UINSFont *)font {
@@ -236,6 +236,11 @@ int xng_markdown_consume(char *text, XNGMarkdownParserCode token, yyscan_t scann
     [_accum appendAttributedString:mutableRecursiveString];
 }
 
+- (UINSFont *)fontWithName:(NSString *)fontName
+{
+    return [UINSFont fontWithName:fontName size:self.topFont.pointSize];
+}
+
 - (void)consumeToken:(XNGMarkdownParserCode)token text:(char *)text {
     NSString *textAsString = [[NSString alloc] initWithCString:text encoding:NSUTF8StringEncoding];
 
@@ -251,17 +256,26 @@ int xng_markdown_consume(char *text, XNGMarkdownParserCode token, yyscan_t scann
     switch (codeToken) {
         case MARKDOWN_EM: { // * *
             textAsString = [textAsString substringWithRange:NSMakeRange(1, textAsString.length - 2)];
-            [attributes addEntriesFromDictionary:[self attributesForFontWithName:self.italicFontName]];
+            [self recurseOnString:textAsString withFont:[self fontWithName:self.italicFontName]];
+            
+            // We already appended the recursive parser's results in recurseOnString.
+            textAsString = nil;
             break;
         }
         case MARKDOWN_STRONG: { // ** **
             textAsString = [textAsString substringWithRange:NSMakeRange(2, textAsString.length - 4)];
-            [attributes addEntriesFromDictionary:[self attributesForFontWithName:self.boldFontName]];
+            [self recurseOnString:textAsString withFont:[self fontWithName:self.boldFontName]];
+            
+            // We already appended the recursive parser's results in recurseOnString.
+            textAsString = nil;
             break;
         }
         case MARKDOWN_STRONGEM: { // *** ***
             textAsString = [textAsString substringWithRange:NSMakeRange(3, textAsString.length - 6)];
-            [attributes addEntriesFromDictionary:[self attributesForFontWithName:self.boldItalicFontName]];
+            [self recurseOnString:textAsString withFont:[self fontWithName:self.boldItalicFontName]];
+            
+            // We already appended the recursive parser's results in recurseOnString.
+            textAsString = nil;
             break;
         }
         case MARKDOWN_STRIKETHROUGH: { // ~~ ~~
